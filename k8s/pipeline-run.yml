@@ -1,0 +1,23 @@
+# pipeline-run.yaml
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: christian-run
+spec:
+  pipelineRef:
+    name: pfs-pipeline
+  serviceAccountName: build-bot
+  params:
+    - name: source-repo
+      value: https://github.com/Darker97/express-sample-app
+    - name: image-repo
+      value: quay.io/darker/buildah
+  workspaces:
+    - name: pfs-shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi

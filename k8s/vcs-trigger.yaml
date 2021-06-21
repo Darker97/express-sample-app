@@ -1,0 +1,73 @@
+# vcs-trigger.yaml
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: vcs-trigger-template
+spec:
+  resourcetemplates:
+# copy from pipeline-run.yaml
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: christian-run
+      spec:
+        pipelineRef:
+          name: pfs-pipeline
+        serviceAccountName: build-bot
+        params:
+          - name: source-repo
+            value: https://github.com/Darker97/express-sample-app
+          - name: image-repo
+            value: quay.io/darker/buildah
+        workspaces:
+          - name: pfs-shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+
+# vcs-trigger.yaml
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: vcs-trigger-binding
+spec:
+  params:
+    - name: namespace
+      value: christian-pipeline-from-scratch
+    - name: gitrepositoryurl
+      value: $(body.repository.url)
+    - name: gitrepositoryname
+      value: $(body.repository.name)
+
+  # vcs-trigger.yaml
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: vcs-trigger-el
+spec:
+  serviceAccountName: vcs-trigger
+  triggers:
+    - bindings:
+        - ref: vcs-trigger-binding
+      template:
+        name: vcs-trigger-template
+
+# vcs-trigger.yaml
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: vcs-trigger-el-route
+spec:
+  port:
+    targetPort: 8080
+  to:
+    kind: Service
+    name: el-vcs-trigger-el
+    weight: 100
